@@ -1,0 +1,53 @@
+name: Build EaglercraftX 1.8
+
+on:
+  push:
+    # Trigger on every commit to any branch
+    branches:
+      - '**' 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant Execute Permissions
+        run: |
+          chmod +x gradlew
+          find . -name "*.sh" -exec chmod +x {} +
+
+      - name: Build WASM-GC Client
+        working-directory: ./target_teavm_wasm_gc
+        run: ./MakeWASMClientBundle.sh
+
+      - name: Build JavaScript Client
+        working-directory: ./target_teavm_javascript
+        run: ./MakeOfflineDownload.sh
+
+      - name: Generate Timestamp and SHA
+        id: vars
+        run: |
+          # Format: Day-Month-Year_Hour-Min-Sec (e.g., 24-05-2024_14-30-05)
+          echo "timestamp=$(date +'%d-%m-%Y_%H-%M-%S')" >> $GITHUB_OUTPUT
+          echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # Result: EaglerBuild_24-05-2024_14-30-05_e5a94fd
+          name: EaglerBuild_${{ steps.vars.outputs.timestamp }}_${{ steps.vars.outputs.sha_short }}
+          path: |
+            javascript_dist/
+            javascript/
+          retention-days: 14
