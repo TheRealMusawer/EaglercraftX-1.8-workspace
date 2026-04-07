@@ -1,0 +1,49 @@
+name: Build EaglercraftX 1.8
+
+on:
+  push:
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Grant Execute Permissions
+        run: |
+          chmod +x gradlew
+          chmod +x target_teavm_wasm_gc/*.sh
+          chmod +x target_teavm_javascript/*.sh
+
+      # Optional: Only needed if your workspace requires manual initialization
+      # - name: Initialize Workspace
+      #   run: ./build_init.sh && ./build_make_workspace.sh
+
+      - name: Build WASM-GC Client
+        working-directory: ./target_teavm_wasm_gc
+        run: ./MakeWASMClientBundle.sh
+
+      - name: Build JavaScript Client
+        working-directory: ./target_teavm_javascript
+        run: ./MakeOfflineDownload.sh
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: eaglercraft-builds
+          path: |
+            javascript_dist/
+            javascript/
